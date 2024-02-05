@@ -35,19 +35,26 @@ struct ContentView: View {
                 case .sport: return ["⚽️", "🏓", "⛸️", "🏈", "🎾", "🛹", "🏸", "🥍", "🏐", "🏊‍♂️", "🏹", "🧗‍♀️"]
                 }
             }
+        
+        var color: Color {
+            switch self {
+            case .nature: return Color.mint
+            case .food: return Color.red
+            case .sport: return Color.blue
+            }
+        }
+        
+            
         }
     
-    
-    @State var cardCount: Int = 8
     @State var theme: Theme = .nature
     @State var emojis: [String] = Theme.nature.emojis
+    @State var cardCount: Int = Int.random(in: 4...9) * 2
     
     var body: some View {
         VStack {
             Text("Memorize!").font(.largeTitle)
-            ScrollView {
-                cards
-            }
+            cards
             cardCountAdjusters
             themeAdjusters
         }
@@ -58,16 +65,29 @@ struct ContentView: View {
     }
     
     var cards: some View {
-        LazyVGrid(columns: [GridItem(),GridItem(), GridItem(), GridItem()]) {
-            ForEach(0..<cardCount, id: \.self) { index in
-                CardView(content: emojis[index])
-                    .aspectRatio(2/3, contentMode: .fit)
-                
+        GeometryReader { geometry in
+            ScrollView {
+                let width: CGFloat = widthThatBestFits(cardCount: cardCount, screenSize: geometry.size.width)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: width))]) {
+                    ForEach(0..<cardCount, id: \.self) { index in
+                        CardView(content: emojis[index % emojis.count])
+                            .aspectRatio(2/3, contentMode: .fit)
+                    }
+                }
+                .foregroundColor(theme.color)
             }
         }
-        .foregroundColor(.mint)
     }
     
+    func widthThatBestFits(cardCount: Int, screenSize: CGFloat) -> CGFloat {
+        let aspectRatio: CGFloat = 2 / 3
+        let screenWidth = screenSize - 40
+        let numberOfRows: CGFloat = CGFloat(cardCount / 3).rounded(.up)
+        let totalPadding: CGFloat = 10 * (numberOfRows - 1)
+        let optimalWidth = (screenWidth - totalPadding) / numberOfRows
+        return max(optimalWidth * aspectRatio, 65)
+    }
+
     var cardCountAdjusters: some View {
         HStack {
             cardRemover
@@ -123,8 +143,8 @@ struct ContentView: View {
     
     func switchTheme(to newTheme: Theme) {
         theme = newTheme
+        cardCount = Int.random(in: 4...(newTheme.emojis.count / 2)) * 2
         shuffleEmojis(to: newTheme)
-        cardCount = min(cardCount, emojis.count)
     }
     
     func shuffleEmojis(to theme: Theme) {
